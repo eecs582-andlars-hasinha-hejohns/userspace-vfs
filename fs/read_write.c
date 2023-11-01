@@ -5,11 +5,17 @@
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
 
+#if 0
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/sched/xacct.h>
 #include <linux/fcntl.h>
+#endif
+// NOTE:
+// required: everything
+// status: ???
 #include <linux/file.h>
+#if 0
 #include <linux/uio.h>
 #include <linux/fsnotify.h>
 #include <linux/security.h>
@@ -19,7 +25,9 @@
 #include <linux/splice.h>
 #include <linux/compat.h>
 #include <linux/mount.h>
+#endif
 #include <linux/fs.h>
+#if 0
 #include "internal.h"
 
 #include <linux/uaccess.h>
@@ -446,7 +454,11 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
 	return __kernel_read(file, buf, count, pos);
 }
 EXPORT_SYMBOL(kernel_read);
+#endif
 
+// NOTE:
+// required: ksys_read
+// status: TODO
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
 	ssize_t ret;
@@ -593,19 +605,25 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 	return ret;
 }
 
+// NOTE:
+// required: needed by ksys_read
+// status: TODO
 /* file_ppos returns &file->f_pos or NULL if file is stream */
 static inline loff_t *file_ppos(struct file *file)
 {
 	return file->f_mode & FMODE_STREAM ? NULL : &file->f_pos;
 }
 
+// NOTE:
+// required: read entry point
+// status: in progress
 ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 {
-	struct fd f = fdget_pos(fd);
-	ssize_t ret = -EBADF;
+	struct fd f = fdget_pos(fd); // NOTE: <linux/file>, file.c, need struct fd
+	ssize_t ret = -EBADF; // NOTE: how to pull in def?
 
 	if (f.file) {
-		loff_t pos, *ppos = file_ppos(f.file);
+		loff_t pos, *ppos = file_ppos(f.file); // NOTE: need loff_t
 		if (ppos) {
 			pos = *ppos;
 			ppos = &pos;
@@ -613,11 +631,11 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 		ret = vfs_read(f.file, buf, count, ppos);
 		if (ret >= 0 && ppos)
 			f.file->f_pos = pos;
-		fdput_pos(f);
+		fdput_pos(f); // NOTE: in <linux/file>
 	}
 	return ret;
 }
-
+#if 0
 SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
 {
 	return ksys_read(fd, buf, count);
@@ -1718,3 +1736,4 @@ int generic_file_rw_checks(struct file *file_in, struct file *file_out)
 
 	return 0;
 }
+#endif
